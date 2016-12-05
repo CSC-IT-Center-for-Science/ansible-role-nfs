@@ -23,14 +23,17 @@
   service: name={{ nfs_server_daemon }} state={{ nfs_server_state }} enabled={{ nfs_server_enabled }}
   when: nfs_exports|length and nfs_service_managed
 
-- name: Setting threadcount for nfsd
-  sysctl:
-      name: fs.nfsd.threads
-      value: "{{ nfsd_threads }}"
-      sysctl_file: /etc/sysctl.d/50-nfsd-threads.conf
-      reload: yes
-      sysctl_set: yes
+- name: Set threadcount for nfsd in sysconfig file
+  lineinfile:
       state: present
+      insertafter: "^#RPCNFSDCOUNT=16"
+      create: no
+      line: 'RPCNFSDCOUNT="{{ nfsd_threads }}"'
+      dest: '/etc/sysconfig/nfs'
   when: nfs_exports|length and nfs_service_managed
-  
+  notify: restart nfs
+
+- name: Set threadcount in runtime system
+  shell: /usr/bin/echo {{ nfsd_threads }} > /proc/fs/nfsd/threads 
+  when: nfs_exports|length and nfs_service_managed
 
